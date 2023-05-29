@@ -1,8 +1,34 @@
 const database = require("./database");
 
 const getUsers = (req, res) => {
+    const initialSql = "select * from users";
+    const where = [];
+
+    if (req.query.language != null) {
+        where.push({
+            column: "language",
+            value: req.query.language,
+            operator: "=",
+        });
+    }
+
+    if (req.query.city != null) {
+        where.push({
+            column: "city",
+            value: req.query.city,
+            operator: "=",
+        });
+    }
+
     database
-        .query("select * from users")
+        .query(
+            where.reduce(
+                (sql, { column, operator }, index) =>
+                    `${sql} ${index === 0 ? "where" : "and"} ${column} ${operator} ?`,
+                initialSql
+            ),
+            where.map(({ value }) => value)
+        )
         .then(([users]) => {
             res.status(200).json(users);
         })
@@ -31,9 +57,7 @@ const getUserById = (req, res) => {
 };
 
 const postUser = (req, res) => {
-    
-
-
+    // res.send("Post route is working 🎉");
     const { firstname, lastname, email, city, language } = req.body;
 
     database
@@ -51,28 +75,29 @@ const postUser = (req, res) => {
 };
 
 const updateUser = (req, res) => {
+    // res.send("Put route is working 🎉");
     const { firstname, lastname, email, city, language } = req.body;
     const id = parseInt(req.params.id);
 
     database
-      .query(
-        "UPDATE users SET firstname = ?, lastname = ?, email = ?, city = ?, language = ? WHERE id = ?",
-        [firstname, lastname, email, city, language, id]
-      )
-      .then(([result]) => {
-        if (result.affectedRows === 0) {
-          res.status(404).send("Not Found");
-        } else {
-          res.sendStatus(204);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        res.status(500).send("Error updating the user");
-      });
-  };
+        .query(
+            "UPDATE users SET firstname = ?, lastname = ?, email = ?, city = ?, language = ? WHERE id = ?",
+            [firstname, lastname, email, city, language, id]
+        )
+        .then(([result]) => {
+            if (result.affectedRows === 0) {
+                res.status(404).send("Not Found");
+            } else {
+                res.sendStatus(204);
+            }
+        })
+        .catch((err) => {
+            console.error(err);
+            res.status(500).send("Error updating the user");
+        });
+};
 
- const deleteUser = (req, res) => {
+const deleteUser = (req, res) => {
     const id = parseInt(req.params.id);
 
     database
@@ -89,6 +114,7 @@ const updateUser = (req, res) => {
             res.status(500).send("Error deleting the user");
         });
 };
+
 module.exports = {
     getUsers,
     getUserById,
